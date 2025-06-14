@@ -80,6 +80,80 @@ def create_pdf(data_df, box_number, box_index, box_count):
     return pdf_data
 
 
+def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
+    buffer = io.BytesIO()
+    page_width = 100 * mm
+    page_height = 100 * mm
+    margins = 5 * mm
+    usable_width = page_width - 2 * margins
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(page_width, page_height),
+        rightMargin=margins,
+        leftMargin=margins,
+        topMargin=margins,
+        bottomMargin=margins,
+    )
+
+    # 表头信息
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.platypus import Spacer
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "CustomTitle",
+        parent=styles["Normal"],
+        fontSize=10,
+        alignment=TA_CENTER,
+        spaceAfter=2 * mm,
+    )
+    box_info = f"{box_number} ({box_index}/{box_count})"
+
+    # 表格部分
+    data = [["SKU", "QTY", "Stock Code"], [sku, quantity, stock_code]]
+    col_count = len(data[0])
+    col_width = usable_width / col_count
+    table = Table(data, colWidths=[col_width] * col_count)
+    style = TableStyle(
+        [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 14),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+            ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 14),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ]
+    )
+    table.setStyle(style)
+
+    # 大号库位号
+    big_style = ParagraphStyle(
+        name="BigStockCode",
+        fontName="Helvetica-Bold",
+        fontSize=60,
+        alignment=TA_CENTER,
+        leading=60,
+        spaceBefore=10,
+    )
+
+    elements = []
+    elements.append(Paragraph(box_info, title_style))
+    elements.append(table)
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(str(stock_code), big_style))
+    doc.build(elements)
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    return pdf_data
+
+
 def main():
     st.title("wanru inbox helper")
     st.write("Welcome to wanru inbox helper!")
@@ -205,6 +279,35 @@ def main():
                     label="Download all boxes PDF (ZIP)",
                     data=zip_buffer,
                     file_name="all_boxes_pdf.zip",
+                    mime="application/zip",
+                )
+
+            # 一键下载所有SKU的表格+大号库位PDF
+            sku_pdf_files = []
+            for row in box_sku_dicts_df.itertuples():
+                box_number = getattr(row, "box_number")
+                sku = getattr(row, "sku")
+                stock_code = getattr(row, "stock_code")
+                pdf_filename = f"{box_number}_{sku}_{stock_code}.pdf"
+                pdf_data = create_sku_pdf(
+                    sku,
+                    getattr(row, "quantity"),
+                    stock_code,
+                    box_number,
+                    getattr(row, "box_index"),
+                    box_count,
+                )
+                sku_pdf_files.append((pdf_filename, pdf_data))
+            if sku_pdf_files:
+                zip_buffer2 = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer2, "w") as zipf:
+                    for fname, fdata in sku_pdf_files:
+                        zipf.writestr(fname, fdata)
+                zip_buffer2.seek(0)
+                st.download_button(
+                    label="Download all SKU stock_code PDF (ZIP)",
+                    data=zip_buffer2,
+                    file_name="all_sku_stockcode_pdf.zip",
                     mime="application/zip",
                 )
 
