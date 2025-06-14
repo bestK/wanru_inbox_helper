@@ -7,6 +7,14 @@ from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 import zipfile
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+)
+import re
 
 st.set_page_config(page_title="Wanru Inbox Helper", page_icon="📬", layout="wide")
 
@@ -16,7 +24,7 @@ def create_pdf(data_df, box_number, box_index, box_count):
 
     # 页面尺寸
     page_width = 100 * mm
-    page_height = 100 * mm
+    page_height = 150 * mm
     margins = 5 * mm
     usable_width = page_width - 2 * margins
     usable_height = page_height - 2 * margins
@@ -53,17 +61,18 @@ def create_pdf(data_df, box_number, box_index, box_count):
     table = Table(data, colWidths=[col_width] * col_count)
     style = TableStyle(
         [
-            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), font_size),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
-            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 1), (-1, -1), font_size),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("ALIGN", (0, 0), (-2, 0), "CENTER"),
+            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            ("FONTNAME", (0, 0), (-2, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-2, 0), 18),
+            # 库位号单元格大号加粗
+            ("FONTNAME", (-1, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (-1, 0), (-1, 0), 50),
+            ("ALIGN", (-1, 0), (-1, 0), "CENTER"),
+            ("VALIGN", (-1, 0), (-1, 0), "MIDDLE"),
+            # 可选：加边框
+            ("BOX", (0, 0), (-1, 0), 1, colors.black),
+            ("INNERGRID", (0, 0), (-1, 0), 0.5, colors.black),
         ]
     )
     table.setStyle(style)
@@ -82,8 +91,10 @@ def create_pdf(data_df, box_number, box_index, box_count):
 
 def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
     buffer = io.BytesIO()
+
+    # 页面设置：竖版
     page_width = 100 * mm
-    page_height = 100 * mm
+    page_height = 150 * mm
     margins = 5 * mm
     usable_width = page_width - 2 * margins
 
@@ -96,58 +107,69 @@ def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
         bottomMargin=margins,
     )
 
-    # 表头信息
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
-    from reportlab.platypus import Spacer
-
+    # 样式定义
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
-        "CustomTitle",
+        "Title",
         parent=styles["Normal"],
         fontSize=10,
         alignment=TA_CENTER,
-        spaceAfter=2 * mm,
+        spaceAfter=5,
     )
+
     box_info = f"{box_number} ({box_index}/{box_count})"
 
-    # 表格部分
+    # 表格数据
     data = [["SKU", "QTY", "Stock Code"], [sku, quantity, stock_code]]
     col_count = len(data[0])
     col_width = usable_width / col_count
-    table = Table(data, colWidths=[col_width] * col_count)
-    style = TableStyle(
-        [
-            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, 0), 14),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-            ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
-            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-            ("FONTSIZE", (0, 1), (-1, -1), 14),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-        ]
-    )
-    table.setStyle(style)
 
-    # 大号库位号
+    table = Table(data, colWidths=[col_width] * col_count)
+    table.setStyle(
+        TableStyle(
+            [
+                # ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                # ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+                # ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                # ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 1), (-1, -1), 12),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+    )
+
+    # 库位号样式（放大显示）
     big_style = ParagraphStyle(
         name="BigStockCode",
         fontName="Helvetica-Bold",
-        fontSize=60,
+        fontSize=100,  # 更大字体
         alignment=TA_CENTER,
-        leading=60,
-        spaceBefore=10,
+        leading=90,
+        spaceBefore=40,
     )
 
-    elements = []
-    elements.append(Paragraph(box_info, title_style))
-    elements.append(table)
-    elements.append(Spacer(1, 10))
-    elements.append(Paragraph(str(stock_code), big_style))
+    def split_stock_code(stock_code):
+        # 匹配前面的字母和后面的数字
+        match = re.match(r"([A-Za-z]+)([0-9]+)", str(stock_code))
+        if match:
+            return f"{match.group(1)}<br/>{match.group(2)}"
+        else:
+            return str(stock_code)
+
+    # 内容元素按纵向顺序排布
+    elements = [
+        Paragraph(box_info, title_style),
+        Spacer(1, 8),
+        table,
+        Spacer(1, 20),
+        Paragraph(split_stock_code(stock_code), big_style),
+    ]
+
     doc.build(elements)
     pdf_data = buffer.getvalue()
     buffer.close()
