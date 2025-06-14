@@ -7,7 +7,7 @@ from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 
-st.set_page_config(page_title="万如收件箱助手", page_icon="📬", layout="wide")
+st.set_page_config(page_title="Wanru Inbox Helper", page_icon="📬", layout="wide")
 
 
 def create_pdf(data_df, box_number, box_index, box_count):
