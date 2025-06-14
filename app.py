@@ -9,11 +9,19 @@ from reportlab.lib.enums import TA_CENTER
 import zipfile
 from reportlab.platypus import (
     SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    PageBreak,
+    SimpleDocTemplate,
     Table,
     TableStyle,
     Paragraph,
     Spacer,
 )
+
+
 import re
 
 st.set_page_config(page_title="Wanru Inbox Helper", page_icon="📬", layout="wide")
@@ -125,29 +133,29 @@ def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
     col_width = usable_width / col_count
 
     table = Table(data, colWidths=[col_width] * col_count)
-    table.setStyle(
-        TableStyle(
-            [
-                # ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-                # ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 12),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
-                # ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                # ("TEXTCOLOR", (0, 1), (-1, -1), colors.black),
-                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 1), (-1, -1), 12),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ]
-        )
+    style = TableStyle(
+        [
+            ("ALIGN", (0, 0), (-2, 0), "CENTER"),
+            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            ("FONTNAME", (0, 0), (-2, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-2, 0), 18),
+            # 库位号单元格大号加粗
+            ("FONTNAME", (-1, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (-1, 0), (-1, 0), 50),
+            ("ALIGN", (-1, 0), (-1, 0), "CENTER"),
+            ("VALIGN", (-1, 0), (-1, 0), "MIDDLE"),
+            # 可选：加边框
+            ("BOX", (0, 0), (-1, 0), 1, colors.black),
+            ("INNERGRID", (0, 0), (-1, 0), 0.5, colors.black),
+        ]
     )
+    table.setStyle(style)
 
     # 库位号样式（放大显示）
     big_style = ParagraphStyle(
         name="BigStockCode",
         fontName="Helvetica-Bold",
-        fontSize=100,  # 更大字体
+        fontSize=120,  # 更大字体
         alignment=TA_CENTER,
         leading=90,
         spaceBefore=40,
@@ -174,6 +182,111 @@ def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
     pdf_data = buffer.getvalue()
     buffer.close()
     return pdf_data
+
+
+def create_sku_multi_pdf(sku_info_list):
+    buffer = io.BytesIO()
+    page_width = 100 * mm
+    page_height = 150 * mm
+    margins = 5 * mm
+    usable_width = page_width - 2 * margins
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(page_width, page_height),
+        rightMargin=margins,
+        leftMargin=margins,
+        topMargin=margins,
+        bottomMargin=margins,
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "Title",
+        fontSize=10,
+        alignment=TA_CENTER,
+        spaceAfter=6,
+    )
+    stock_code_style_line1 = ParagraphStyle(
+        "StockCodeLine1",
+        fontSize=60,
+        alignment=TA_CENTER,
+        spaceBefore=40,
+        leading=60,
+    )
+    stock_code_style_line2 = ParagraphStyle(
+        "StockCodeLine2",
+        fontSize=100,
+        alignment=TA_CENTER,
+        leading=100,
+    )
+
+    elements = []
+    for sku, quantity, stock_code, box_number, box_index, box_count in sku_info_list:
+        # 顶部标题
+        box_info = f"{box_number} ({box_index}/{box_count})"
+        elements.append(Paragraph(box_info, title_style))
+        elements.append(Spacer(1, 6))
+
+        # 表格部分
+        data = [["SKU", "QTY", "Stock Code"], [sku, quantity, stock_code]]
+        col_count = len(data[0])
+        col_width = usable_width / col_count
+        table = Table(data, colWidths=[col_width] * col_count)
+        style = TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 14),  # 表头
+                ("FONTNAME", (0, 1), (-1, 1), "Helvetica"),
+                ("FONTSIZE", (0, 1), (-1, 1), 14),  # 内容
+                ("BOX", (0, 0), (-1, -1), 1, colors.black),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+        table.setStyle(style)
+        elements.append(table)
+        elements.append(Spacer(1, 30))
+
+        # 表格下方大号库位号
+        elements.append(
+            big_stock_code_table(stock_code)
+        )  # 或 big_stock_code_paragraph(stock_code)
+
+        elements.append(PageBreak())
+
+    if elements:
+        elements = elements[:-1]  # 移除最后一个 PageBreak
+    doc.build(elements)
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    return pdf_data
+
+
+def big_stock_code_table(stock_code):
+    import re
+
+    match = re.match(r"([A-Za-z]+)([0-9]+)", str(stock_code))
+    if match:
+        line1 = match.group(1)
+        line2 = match.group(2)
+    else:
+        line1 = str(stock_code)
+        line2 = ""
+    data = [[line1], [line2]]
+    table = Table(data, colWidths=[None], rowHeights=[60, 90])
+    style = TableStyle(
+        [
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 100),  # 两行都用大号字体
+            # 可选：("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+        ]
+    )
+    table.setStyle(style)
+    return table
 
 
 def main():
@@ -279,7 +392,7 @@ def main():
 
                 # 生成 PDF
                 pdf_data = create_pdf(box_sku_dicts_df_box, box_number, i, box_count)
-                pdf_filename = f"{box_number}.pdf"
+                pdf_filename = f"{str(box_number)[:11]}.pdf"
                 pdf_files.append((pdf_filename, pdf_data))
 
                 # 添加 PDF 下载按钮（单个）
@@ -304,33 +417,28 @@ def main():
                     mime="application/zip",
                 )
 
-            # 一键下载所有SKU的表格+大号库位PDF
-            sku_pdf_files = []
-            for row in box_sku_dicts_df.itertuples():
-                box_number = getattr(row, "box_number")
-                sku = getattr(row, "sku")
-                stock_code = getattr(row, "stock_code")
-                pdf_filename = f"{box_number}_{sku}_{stock_code}.pdf"
-                pdf_data = create_sku_pdf(
-                    sku,
-                    getattr(row, "quantity"),
-                    stock_code,
-                    box_number,
-                    getattr(row, "box_index"),
-                    box_count,
-                )
-                sku_pdf_files.append((pdf_filename, pdf_data))
-            if sku_pdf_files:
-                zip_buffer2 = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer2, "w") as zipf:
-                    for fname, fdata in sku_pdf_files:
-                        zipf.writestr(fname, fdata)
-                zip_buffer2.seek(0)
+            # 收集所有SKU信息
+            sku_info_list = []
+            box_number_list = list(box_sku_dicts_df["box_number"].unique())
+            box_count = len(box_number_list)
+            for i, box_number in enumerate(box_number_list, 1):
+                box_df = box_sku_dicts_df[box_sku_dicts_df["box_number"] == box_number]
+                for row in box_df.itertuples():
+                    sku = getattr(row, "sku")
+                    quantity = getattr(row, "quantity")
+                    stock_code = getattr(row, "stock_code")
+                    sku_info_list.append(
+                        (sku, quantity, stock_code, box_number, i, box_count)
+                    )
+
+            # 生成多页PDF
+            if sku_info_list:
+                pdf_data = create_sku_multi_pdf(sku_info_list)
                 st.download_button(
-                    label="Download all SKU stock_code PDF (ZIP)",
-                    data=zip_buffer2,
-                    file_name="all_sku_stockcode_pdf.zip",
-                    mime="application/zip",
+                    label="Download all SKU stock_code PDF (multi-page)",
+                    data=pdf_data,
+                    file_name=f"{str(box_number)[:11]}.pdf",
+                    mime="application/pdf",
                 )
 
 
