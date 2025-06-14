@@ -70,7 +70,7 @@ def create_pdf(data_df, box_number, box_index, box_count):
 
     # 组装最终的 PDF 内容
     elements = []
-    box_info = f"Box {box_number} ({box_index}/{box_count})"
+    box_info = f"{box_number} ({box_index}/{box_count})"
     elements.append(Paragraph(box_info, title_style))
     elements.append(table)
     doc.build(elements)
