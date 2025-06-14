@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "wanru_inbox_helper"
+version = "0.1.0"
+description = "A Streamlit application for inbox management"
+authors = ["Your Name"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+streamlit = "^1.45.1"
+pandas = "^2.3.0"
+xlsxwriter = "^3.2.3"
+reportlab = "^4.4.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
