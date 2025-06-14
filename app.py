@@ -6,6 +6,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
+import zipfile
 
 st.set_page_config(page_title="Wanru Inbox Helper", page_icon="📬", layout="wide")
 
@@ -172,6 +173,7 @@ def main():
             )
 
             # 为每个箱号生成 PDF
+            pdf_files = []
             for i, box_number in enumerate(box_sku_dicts_df["box_number"].unique(), 1):
                 box_sku_dicts_df_box = box_sku_dicts_df[
                     box_sku_dicts_df["box_number"] == box_number
@@ -181,13 +183,29 @@ def main():
 
                 # 生成 PDF
                 pdf_data = create_pdf(box_sku_dicts_df_box, box_number, i, box_count)
+                pdf_filename = f"{box_number}.pdf"
+                pdf_files.append((pdf_filename, pdf_data))
 
-                # 添加 PDF 下载按钮
+                # 添加 PDF 下载按钮（单个）
                 st.download_button(
                     label=f"Download PDF for Box {box_number}",
                     data=pdf_data,
-                    file_name=f"{box_number}.pdf",
+                    file_name=pdf_filename,
                     mime="application/pdf",
+                )
+
+            # 一键下载所有 PDF（zip）
+            if pdf_files:
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w") as zipf:
+                    for fname, fdata in pdf_files:
+                        zipf.writestr(fname, fdata)
+                zip_buffer.seek(0)
+                st.download_button(
+                    label="Download all boxes PDF (ZIP)",
+                    data=zip_buffer,
+                    file_name="all_boxes_pdf.zip",
+                    mime="application/zip",
                 )
 
 
