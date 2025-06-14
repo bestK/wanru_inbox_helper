@@ -214,6 +214,17 @@ files = [
 ]
 
 [[package]]
+name = "et-xmlfile"
+version = "2.0.0"
+description = "An implementation of lxml.xmlfile for the standard library"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "et_xmlfile-2.0.0-py3-none-any.whl", hash = "sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa"},
+    {file = "et_xmlfile-2.0.0.tar.gz", hash = "sha256:dab3f4764309081ce75662649be815c4c9081e88f0837825f90fd28317d4da54"},
+]
+
+[[package]]
 name = "gitdb"
 version = "4.0.12"
 description = "Git Object Database"
@@ -518,6 +529,20 @@ files = [
     {file = "numpy-2.3.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:e017a8a251ff4d18d71f139e28bdc7c31edba7a507f72b1414ed902cbe48c74d"},
     {file = "numpy-2.3.0.tar.gz", hash = "sha256:581f87f9e9e9db2cba2141400e160e9dd644ee248788d6f90636eeb8fd9260a6"},
 ]
+
+[[package]]
+name = "openpyxl"
+version = "3.1.5"
+description = "A Python library to read/write Excel 2010 xlsx/xlsm files"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "openpyxl-3.1.5-py2.py3-none-any.whl", hash = "sha256:5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2"},
+    {file = "openpyxl-3.1.5.tar.gz", hash = "sha256:cf0e3cf56142039133628b5acffe8ef0c12bc902d2aadd3e0fe5878dc08d1050"},
+]
+
+[package.dependencies]
+et-xmlfile = "*"
 
 [[package]]
 name = "packaging"
@@ -1227,4 +1252,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.9.7 || >3.9.7,<4.0"
-content-hash = "cb849ed65239a1062e91bc899164c2b6bbf0971779007c458c9ba1a0249bf959"
+content-hash = "99da4d91d974bd35b2074a9d7bbe17af7822946e3aa941fac77b734235742919"
