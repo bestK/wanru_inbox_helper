@@ -274,15 +274,16 @@ def big_stock_code_table(stock_code):
     else:
         line1 = str(stock_code)
         line2 = ""
-    data = [[line1], [line2]]
-    table = Table(data, colWidths=[None], rowHeights=[60, 90])
+    # 修复数据格式，将波浪线作为第三行
+    data = [[line1], [line2], ["//////////////"]]
+    table = Table(data, colWidths=[None], rowHeights=[60, 90, 20])
     style = TableStyle(
         [
             ("ALIGN", (0, 0), (-1, -1), "CENTER"),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 100),  # 两行都用大号字体
-            # 可选：("BOX", (0, 0), (-1, -1), 0.5, colors.black),
+            ("TOPPADDING", (0, 2), (-1, 2), 100),  # 为第三行添加顶部边距
         ]
     )
     table.setStyle(style)
