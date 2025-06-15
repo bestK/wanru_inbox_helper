@@ -1,24 +1,26 @@
 import pandas as pd
 import streamlit as st
 import io
+import zipfile
+
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
-import zipfile
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
     Spacer,
     Table,
     TableStyle,
-    PageBreak,
     SimpleDocTemplate,
     Table,
     TableStyle,
     Paragraph,
     Spacer,
+    PageBreak,
+    KeepTogether,
 )
 
 
@@ -239,12 +241,10 @@ def create_sku_multi_pdf(sku_info_list):
         )
         table.setStyle(style)
         elements.append(table)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(0, 10))
 
         # 表格下方大号库位号
-        elements.append(
-            big_stock_code_table(stock_code)
-        )  # 或 big_stock_code_paragraph(stock_code)
+        elements.append(big_stock_code_table(stock_code))
 
         elements.append(PageBreak())
 
@@ -257,8 +257,6 @@ def create_sku_multi_pdf(sku_info_list):
 
 
 def big_stock_code_table(stock_code):
-    import re
-
     match = re.match(r"([A-Za-z]+)([0-9]+)", str(stock_code))
     if match:
         line1 = match.group(1)
@@ -266,20 +264,44 @@ def big_stock_code_table(stock_code):
     else:
         line1 = str(stock_code)
         line2 = ""
-    # 修复数据格式，将波浪线作为第三行
+
+    # 主体内容
     data = [[line1], [line2], ["//////////////"]]
-    table = Table(data, colWidths=[None], rowHeights=[60, 90, 20])
-    style = TableStyle(
-        [
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 100),  # 两行都用大号字体
-            ("TOPPADDING", (0, 2), (-1, 2), 100),  # 为第三行添加顶部边距
-        ]
+    inner_table = Table(
+        data,
+        colWidths=[200],  # 固定宽度有助于居中效果
+        rowHeights=[80, 120, 40],
+        hAlign="CENTER",  # ✅ 关键点：居中
     )
-    table.setStyle(style)
-    return table
+    inner_table.setStyle(
+        TableStyle(
+            [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 100),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.black),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+            ]
+        )
+    )
+
+    # 可选：上下 padding
+    outer_table = Table(
+        [[inner_table]], colWidths=["*"], hAlign="CENTER"
+    )  # ✅ 外层也设置居中
+    outer_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+            ]
+        )
+    )
+
+    return KeepTogether(outer_table)
 
 
 def main():
