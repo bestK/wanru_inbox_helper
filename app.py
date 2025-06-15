@@ -353,7 +353,23 @@ def main():
                 inventory_list_excel_data["Stock Code"],
                 inventory_list_excel_data["Product Sku"],
             ):
-                inventory_map[str(product_sku).strip()] = str(stock_code).strip()
+                sku = str(product_sku).strip()
+                code = str(stock_code).strip()
+
+                if sku in inventory_map:
+                    if inventory_map[sku] != code:
+                        st.error(
+                            f"SKU {sku} has multiple stock codes: '{inventory_map[sku]}' and '{code}'"
+                        )
+                        st.stop()
+                else:
+                    inventory_map[sku] = code
+
+            # 检查不存在的sku
+            for sku in box_skus:
+                if sku not in inventory_map:
+                    st.error(f"SKU {sku} is not in inventory excel")
+                    st.stop()
 
             # 使用映射更新 box_sku_dicts 中的 stock_code
             for item in box_sku_dicts:
