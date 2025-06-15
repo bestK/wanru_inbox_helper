@@ -120,7 +120,8 @@ def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
     title_style = ParagraphStyle(
         "Title",
         parent=styles["Normal"],
-        fontSize=10,
+        fontSize=20,  # 增加字体大小
+        fontName="Helvetica-Bold",  # 使用加粗字体
         alignment=TA_CENTER,
         spaceAfter=5,
     )
@@ -203,22 +204,9 @@ def create_sku_multi_pdf(sku_info_list):
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         "Title",
-        fontSize=10,
+        fontSize=16,
         alignment=TA_CENTER,
         spaceAfter=6,
-    )
-    stock_code_style_line1 = ParagraphStyle(
-        "StockCodeLine1",
-        fontSize=60,
-        alignment=TA_CENTER,
-        spaceBefore=40,
-        leading=60,
-    )
-    stock_code_style_line2 = ParagraphStyle(
-        "StockCodeLine2",
-        fontSize=100,
-        alignment=TA_CENTER,
-        leading=100,
     )
 
     elements = []
