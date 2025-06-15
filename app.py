@@ -121,7 +121,6 @@ def create_sku_pdf(sku, quantity, stock_code, box_number, box_index, box_count):
         "Title",
         parent=styles["Normal"],
         fontSize=20,  # 增加字体大小
-        fontName="Helvetica-Bold",  # 使用加粗字体
         alignment=TA_CENTER,
         spaceAfter=5,
     )
@@ -201,10 +200,10 @@ def create_sku_multi_pdf(sku_info_list):
         bottomMargin=margins,
     )
 
-    styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         "Title",
-        fontSize=16,
+        fontSize=20,
+        fontName="Helvetica-Bold",
         alignment=TA_CENTER,
         spaceAfter=6,
     )
@@ -212,8 +211,13 @@ def create_sku_multi_pdf(sku_info_list):
     elements = []
     for sku, quantity, stock_code, box_number, box_index, box_count in sku_info_list:
         # 顶部标题
-        box_info = f"{box_number} ({box_index}/{box_count})"
+        box_info = f"{box_number}"
         elements.append(Paragraph(box_info, title_style))
+        elements.append(Spacer(1, 6))
+
+        # 修复格式化字符串
+        box_count_info = f"{box_index} / {box_count}"
+        elements.append(Paragraph(box_count_info, title_style))
         elements.append(Spacer(1, 6))
 
         # 表格部分
@@ -235,7 +239,7 @@ def create_sku_multi_pdf(sku_info_list):
         )
         table.setStyle(style)
         elements.append(table)
-        elements.append(Spacer(1, 30))
+        elements.append(Spacer(1, 10))
 
         # 表格下方大号库位号
         elements.append(
