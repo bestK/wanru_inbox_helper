@@ -267,7 +267,7 @@ def big_stock_code_table(stock_code):
         line1 = str(stock_code)
         line2 = ""
     # 修复数据格式，将波浪线作为第三行
-    data = [[line1], [line2], ["//////////////"]]
+    data = [[line1], [line2], ["★★★★★★★★★★"]]
     table = Table(data, colWidths=[None], rowHeights=[60, 90, 20])
     style = TableStyle(
         [
