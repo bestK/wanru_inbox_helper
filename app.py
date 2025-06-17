@@ -364,6 +364,7 @@ def main():
             # Stock Code, Product Sku
 
             # 构建 SKU 到 stock_code 的映射
+            multiple_err_msgs = []  # 使用列表存储多个错误消息
             for stock_code, product_sku in zip(
                 inventory_list_excel_data["Stock Code"],
                 inventory_list_excel_data["Product Sku"],
@@ -373,13 +374,16 @@ def main():
 
                 if sku in inventory_map:
                     if inventory_map[sku] != code:
-                        st.error(
+                        multiple_err_msgs.append(
                             f"SKU {sku} has multiple stock codes: '{inventory_map[sku]}' and '{code}'"
                         )
-                        st.stop()
                 else:
                     inventory_map[sku] = code
 
+            if multiple_err_msgs:  # 如果有错误消息
+                for err_msg in multiple_err_msgs:
+                    st.error(err_msg)  # 每个错误消息单独显示
+                st.stop()
             # 检查不存在的sku
             for sku in box_skus:
                 if sku not in inventory_map:
@@ -451,7 +455,7 @@ def main():
             # 收集所有SKU信息
             sku_info_list = []
             box_number_list = list(box_sku_dicts_df["box_number"].unique())
-            box_count = len(box_number_list)
+
             for i, box_number in enumerate(box_number_list, 1):
                 box_df = box_sku_dicts_df[box_sku_dicts_df["box_number"] == box_number]
                 for row in box_df.itertuples():
