@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 import io
-import zipfile
 
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
@@ -216,7 +215,7 @@ def create_sku_multi_pdf(sku_info_list):
     for sku, quantity, stock_code, box_number, box_count in sku_info_list:
         # 顶部标题
         box_info = f"{box_number}"
-        
+
         elements.append(Paragraph(box_info, title_style))
         elements.append(Spacer(1, 6))
 
@@ -435,28 +434,6 @@ def main():
                 pdf_data = create_pdf(box_sku_dicts_df_box, box_number, i, box_count)
                 pdf_filename = f"{str(box_number)[:11]}.pdf"
                 pdf_files.append((pdf_filename, pdf_data))
-
-                # 添加 PDF 下载按钮（单个）
-                st.download_button(
-                    label=f"Download PDF for Box {box_number}",
-                    data=pdf_data,
-                    file_name=pdf_filename,
-                    mime="application/pdf",
-                )
-
-            # 一键下载所有 PDF（zip）
-            if pdf_files:
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, "w") as zipf:
-                    for fname, fdata in pdf_files:
-                        zipf.writestr(fname, fdata)
-                zip_buffer.seek(0)
-                st.download_button(
-                    label="Download all boxes PDF (ZIP)",
-                    data=zip_buffer,
-                    file_name="all_boxes_pdf.zip",
-                    mime="application/zip",
-                )
 
             # 收集所有SKU信息
             sku_info_list = []
