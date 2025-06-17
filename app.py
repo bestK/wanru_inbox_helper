@@ -211,13 +211,18 @@ def create_sku_multi_pdf(sku_info_list):
     )
 
     elements = []
-    for sku, quantity, stock_code, box_number, box_index, box_count in sku_info_list:
+    box_index = 0
+    last_box_number = None
+    for sku, quantity, stock_code, box_number, box_count in sku_info_list:
         # 顶部标题
         box_info = f"{box_number}"
+        
         elements.append(Paragraph(box_info, title_style))
         elements.append(Spacer(1, 6))
 
-        # 修复格式化字符串
+        if box_number != last_box_number:
+            box_index = box_index + 1
+
         box_count_info = f"{box_index} / {box_count}"
         elements.append(Paragraph(box_count_info, title_style))
         elements.append(Spacer(1, 6))
@@ -247,6 +252,7 @@ def create_sku_multi_pdf(sku_info_list):
         elements.append(big_stock_code_table(stock_code))
 
         elements.append(PageBreak())
+        last_box_number = box_number
 
     if elements:
         elements = elements[:-1]  # 移除最后一个 PageBreak
@@ -463,7 +469,7 @@ def main():
                     quantity = getattr(row, "quantity")
                     stock_code = getattr(row, "stock_code")
                     sku_info_list.append(
-                        (sku, quantity, stock_code, box_number, i, box_count)
+                        (sku, quantity, stock_code, box_number, box_count)
                     )
 
             # 生成多页PDF
