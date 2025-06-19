@@ -19,7 +19,7 @@ from reportlab.platypus import (
     Paragraph,
     Spacer,
     PageBreak,
-    KeepTogether,
+    Flowable,
 )
 
 
@@ -191,6 +191,7 @@ def create_sku_multi_pdf(sku_info_list):
     page_height = 150 * mm
     margins = 5 * mm
     usable_width = page_width - 2 * margins
+    usable_height = page_height - 2 * margins
 
     doc = SimpleDocTemplate(
         buffer,
@@ -209,36 +210,52 @@ def create_sku_multi_pdf(sku_info_list):
         spaceAfter=6,
     )
 
-    elements = []
-    box_index = 0
-    last_box_number = None
-    for sku, quantity, stock_code, box_number, box_count in sku_info_list:
-        # 顶部标题
-        box_info = f"{box_number}"
+    # 修复页码编号错误，确保 box_index 正确
+    box_number_set = sorted(set(info[3] for info in sku_info_list))
+    box_number_map = {
+        box_number: idx + 1 for idx, box_number in enumerate(box_number_set)
+    }
 
-        elements.append(Paragraph(box_info, title_style))
+    elements = []
+
+    prev_box_number = ""
+    for (
+        sku,
+        quantity,
+        stock_code,
+        box_number,
+        box_count,
+        sku_type_count,
+        box_sku_type_count,
+    ) in sku_info_list:
+        box_index = box_number_map[box_number]
+        if prev_box_number != box_number:
+            prev_box_number = box_number
+            box_sku_type_index = 1
+        else:
+            box_sku_type_index += 1
+
+        # 标题：箱号
+        elements.append(Paragraph(str(box_number), title_style))
         elements.append(Spacer(1, 6))
 
-        if box_number != last_box_number:
-            box_index = box_index + 1
-
+        # 页码
         box_count_info = f"{box_index} / {box_count}"
         elements.append(Paragraph(box_count_info, title_style))
         elements.append(Spacer(1, 6))
 
-        # 表格部分
+        # SKU 表格
         data = [["SKU", "QTY", "Stock Code"], [sku, quantity, stock_code]]
-        col_count = len(data[0])
-        col_width = usable_width / col_count
-        table = Table(data, colWidths=[col_width] * col_count)
+        col_width = usable_width / 3
+        table = Table(data, colWidths=[col_width] * 3)
         style = TableStyle(
             [
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 14),  # 表头
+                ("FONTSIZE", (0, 0), (-1, 0), 14),
                 ("FONTNAME", (0, 1), (-1, 1), "Helvetica"),
-                ("FONTSIZE", (0, 1), (-1, 1), 14),  # 内容
+                ("FONTSIZE", (0, 1), (-1, 1), 14),
                 ("BOX", (0, 0), (-1, -1), 1, colors.black),
                 ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.black),
             ]
@@ -247,21 +264,32 @@ def create_sku_multi_pdf(sku_info_list):
         elements.append(table)
         elements.append(Spacer(0, 10))
 
-        # 表格下方大号库位号
-        elements.append(big_stock_code_table(stock_code))
+        # 库位码（限制最大高度为页面剩余空间）
+        elements.append(
+            big_stock_code_table(
+                stock_code,
+                box_sku_type_index,
+                box_sku_type_count,
+                max_width=usable_width,
+                max_height=usable_height - 130,  # 留出上面标题和表格的空间
+            )
+        )
 
         elements.append(PageBreak())
-        last_box_number = box_number
 
     if elements:
         elements = elements[:-1]  # 移除最后一个 PageBreak
+
     doc.build(elements)
     pdf_data = buffer.getvalue()
     buffer.close()
     return pdf_data
 
 
-def big_stock_code_table(stock_code):
+def big_stock_code_table(
+    stock_code, box_sku_type_index, box_sku_type_count, max_width=90 * mm, max_height=90 * mm
+):
+    # 拆分 stock code
     match = re.match(r"([A-Za-z]+)([0-9]+)", str(stock_code))
     if match:
         line1 = match.group(1)
@@ -270,43 +298,73 @@ def big_stock_code_table(stock_code):
         line1 = str(stock_code)
         line2 = ""
 
-    # 主体内容
-    data = [[line1], [line2], ["//////////////"]]
-    inner_table = Table(
-        data,
-        colWidths=[200],  # 固定宽度有助于居中效果
-        rowHeights=[80, 120, 40],
-        hAlign="CENTER",  # ✅ 关键点：居中
+    # 创建黑底白字合并段落
+    big_text = f"{line1}<br/>{line2}"
+    para_style = ParagraphStyle(
+        name="BigStockCode",
+        fontName="Helvetica-Bold",
+        fontSize=100,
+        alignment=TA_CENTER,
+        leading=95,  # 控制行距，默认120太大
+        spaceBefore=0,
+        spaceAfter=0,
+        textColor=colors.white,
     )
-    inner_table.setStyle(
+    big_paragraph = Paragraph(big_text, para_style)
+
+    # 用表格包裹黑底段落
+    main_table = Table(
+        [[big_paragraph]], colWidths=[max_width], rowHeights=[max_height]
+    )
+    main_table.setStyle(
         TableStyle(
             [
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.black),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 100),
-                ("BACKGROUND", (0, 0), (-1, -1), colors.black),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
             ]
         )
     )
 
-    # 可选：上下 padding
-    outer_table = Table(
-        [[inner_table]], colWidths=["*"], hAlign="CENTER"
-    )  # ✅ 外层也设置居中
-    outer_table.setStyle(
+    # 角标表格
+    corner_table = Table([[f"{box_sku_type_index}/{box_sku_type_count}"]], colWidths=[40], rowHeights=[40])
+    corner_table.setStyle(
         TableStyle(
             [
-                ("LEFTPADDING", (0, 0), (-1, -1), 10),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-                ("TOPPADDING", (0, 0), (-1, -1), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 36),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.black),
             ]
         )
     )
 
-    return KeepTogether(outer_table)
+    # 自定义叠加类
+    class Overlay(Flowable):
+        def __init__(self, base, corner):
+            Flowable.__init__(self)
+            self.base = base
+            self.corner = corner
+            self.width, self.height = base._argW[0], sum(base._argH)
+
+        def draw(self):
+            self.base.wrapOn(self.canv, self.width, self.height)
+            self.base.drawOn(self.canv, 0, 0)
+
+            self.corner.wrapOn(self.canv, self.width, self.height)
+            self.corner.drawOn(self.canv, self.width - 42, self.height - 42)
+
+        def wrap(self, availWidth, availHeight):
+            return self.width, self.height
+
+    return Overlay(main_table, corner_table)
 
 
 def main():
@@ -445,8 +503,18 @@ def main():
                     sku = getattr(row, "sku")
                     quantity = getattr(row, "quantity")
                     stock_code = getattr(row, "stock_code")
+                    sku_type_count = len(box_sku_dicts_df["sku"].unique())
+                    box_sku_type_count = len(box_df["sku"].unique())
                     sku_info_list.append(
-                        (sku, quantity, stock_code, box_number, box_count)
+                        (
+                            sku,
+                            quantity,
+                            stock_code,
+                            box_number,
+                            box_count,
+                            sku_type_count,
+                            box_sku_type_count,
+                        )
                     )
 
             # 生成多页PDF
