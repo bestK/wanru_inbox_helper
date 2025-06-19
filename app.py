@@ -245,9 +245,9 @@ def create_sku_multi_pdf(sku_info_list):
         elements.append(Spacer(1, 6))
 
         # SKU 表格
-        data = [["SKU", "QTY", "Stock Code"], [sku, quantity, stock_code]]
-        col_width = usable_width / 3
-        table = Table(data, colWidths=[col_width] * 3)
+        data = [["SKU", "QTY", "Stock"], [sku, quantity, stock_code]]
+        col_widths = [usable_width * 0.5, usable_width * 0.2, usable_width * 0.3]
+        table = Table(data, colWidths=col_widths)
         style = TableStyle(
             [
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
@@ -287,7 +287,11 @@ def create_sku_multi_pdf(sku_info_list):
 
 
 def big_stock_code_table(
-    stock_code, box_sku_type_index, box_sku_type_count, max_width=90 * mm, max_height=90 * mm
+    stock_code,
+    box_sku_type_index,
+    box_sku_type_count,
+    max_width=90 * mm,
+    max_height=90 * mm,
 ):
     # 拆分 stock code
     match = re.match(r"([A-Za-z]+)([0-9]+)", str(stock_code))
@@ -332,7 +336,11 @@ def big_stock_code_table(
     )
 
     # 角标表格
-    corner_table = Table([[f"{box_sku_type_index}/{box_sku_type_count}"]], colWidths=[40], rowHeights=[40])
+    corner_table = Table(
+        [[f"{box_sku_type_index}/{box_sku_type_count}"]],
+        colWidths=[40],
+        rowHeights=[40],
+    )
     corner_table.setStyle(
         TableStyle(
             [
